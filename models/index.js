@@ -1,15 +1,33 @@
 const sequelize = require("../db");
+const BusinessType = require("./BusinessType");
+const Business = require("./Business");
+const Category = require("./Category");
+const Item = require("./Item");
+const Type = require("./Type");
 
-const City = require("./City");
-const Park = require("./Park");
-const Form = require("./Form");
+Business.belongsTo(BusinessType, { foreignKey: "typeId" });
+BusinessType.hasMany(Business, { foreignKey: "typeId" });
 
-Park.belongsTo(City, { foreignKey: "cityId", targetKey: "id" });
-Form.belongsTo(Park, { foreignKey: "parkId", targetKey: "id" });
+Category.belongsTo(Category, { as: "parent", foreignKey: "parentId" }); // Родительская категория
+Category.hasMany(Category, { as: "children", foreignKey: "parentId" }); // Дочерние категории
+
+Item.belongsTo(Category, { foreignKey: "categoryId" });
+Category.hasMany(Item, { foreignKey: "categoryId" });
+
+Item.belongsTo(Type, { foreignKey: "typeId" });
+Type.hasMany(Item, { foreignKey: "typeId" });
+
+Item.belongsTo(Business, { foreignKey: "businessId" });
+Business.hasMany(Item, { foreignKey: "businessId" });
+
+Type.belongsTo(Category, { foreignKey: "categoryId" });
+Category.hasMany(Type, { foreignKey: "categoryId" });
 
 module.exports = {
-  Park,
-  City,
-  Form,
-  sequelize,
+    BusinessType,
+    Business,
+    Category,
+    Item,
+    Type,
+    sequelize,
 };
