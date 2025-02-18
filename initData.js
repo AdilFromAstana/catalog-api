@@ -1,38 +1,53 @@
 const Category = require("./models/Category");
 
-const categoriesData = [
-    {
-        "id": 3203,
-        "level": 3,
-        "titleRu": "Масла и эфирные масла",
-        "titleKz": "Майлар және эфир майлары",
-        "commissionStart": 12,
-        "commissionEnd": 12,
-        "parentId": 3204,
-        "parentTitleRu": "Товары для ароматерапии",
-        "parentTitleKz": "Ароматерапияға арналған тауарлар",
-        "mainCategoryId": 165,
-        "mainCategoryTitleRu": "Красота и здоровье",
-        "mainCategoryTitleKz": "Сұлулық және денсаулық",
-        "hasChild": false
-    }
-]
+const categoriesData = [];
 
-
-
-
+const transformData = (data) =>
+  data.map((item) => ({
+    id: item.id,
+    level: item.level,
+    titleRu: item.title,
+    titleKz: "-",
+    commissionStart: item.commission_start,
+    commissionEnd: item.commission_end,
+    parentId: item.parent_id,
+    parentTitleRu: item.parent_title,
+    parentTitleKz: "-",
+    mainCategoryId: item.main_category_id,
+    mainCategoryTitleRu: item.main_category_title,
+    mainCategoryTitleKz: "-",
+    hasChild: item.has_child,
+  }));
 
 const d = async () => {
-    try {
-        const count = await Category.count();
-        // if (count === 0) {
-        await Category.bulkCreate(categoriesData);
-        console.log('Категории успешно загружены в базу данных');
-        // } else {
-        //     console.log('Таблица Category уже содержит данные, загрузка пропущена.');
-        // }
-    } catch (error) {
-        console.error('Ошибка при загрузке категорий:', error);
+  try {
+    const count = await Category.count();
+    console.log(`Количество категорий в базе: ${count}`);
+    console.log(`Всего категорий для загрузки: ${categoriesData.length}`);
+
+    const errors = [];
+
+    for (const category of transformData(categoriesData)) {
+      try {
+        await Category.create(category); // Создаём категорию по одной
+      } catch (error) {
+        console.error(
+          `Ошибка при создании категории ${category.titleRu}:`,
+          error.message
+        );
+        errors.push({ category: category.titleRu, error: error.message });
+      }
     }
-}
-d()
+
+    console.log("Категории успешно загружены в базу данных");
+
+    if (errors.length > 0) {
+      console.log("Ошибки при загрузке категорий:");
+      console.table(errors);
+    }
+  } catch (error) {
+    console.error("Глобальная ошибка при загрузке категорий:", error);
+  }
+};
+
+d();

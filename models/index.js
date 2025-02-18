@@ -24,10 +24,10 @@ Type.belongsTo(Category, { foreignKey: "categoryId" });
 Category.hasMany(Type, { foreignKey: "categoryId" });
 
 module.exports = {
-    BusinessType,
-    Business,
-    Category,
-    Item,
-    Type,
-    sequelize,
+  BusinessType,
+  Business,
+  Category,
+  Item,
+  Type,
+  sequelize,
 };
