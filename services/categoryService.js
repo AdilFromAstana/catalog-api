@@ -33,18 +33,23 @@ class CategoryService {
   async getCategoriesByLevelAndParent(level, parentId = null) {
     try {
       let whereCondition = {};
-      if (parentId) {
-        console.log(typeof parentId)
+      if (parentId && level > 1) {
         whereCondition.parentId = parentId;
       }
-      if (level) {
+      if (level <= 3) {
         whereCondition.level = level;
       }
       const categories = await Category.findAll({
         where: whereCondition,
       });
 
-      return categories;
+      return {
+        categories,
+        currentTitleRu: categories[0]?.parentTitleRu || "Главная категория",
+        currentId: level === 1 ? null : categories[0]?.parentId, // Если level = 1, parentId = null
+        currentLevel: level,
+        hasChild: categories[0]?.hasChild
+      };
     } catch (error) {
       console.error("Error fetching categories:", error);
       throw new Error("Failed to fetch categories");
