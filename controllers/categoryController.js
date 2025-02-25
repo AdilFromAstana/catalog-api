@@ -63,6 +63,32 @@ class CategoryController {
       res.status(500).json({ error: error.message });
     }
   }
+
+  async addOrUpdateAttributes(req, res) {
+    try {
+      const { id } = req.params;
+      const { attributes } = req.body;
+
+      if (!Array.isArray(attributes)) {
+        return res
+          .status(400)
+          .json({ error: "attributes должен быть массивом" });
+      }
+
+      const updatedCategory = await categoryService.addOrUpdateAttributes(
+        id,
+        attributes
+      );
+
+      if (!updatedCategory) {
+        return res.status(404).json({ error: "Категория не найдена" });
+      }
+
+      res.json(updatedCategory);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
 }
 
 module.exports = new CategoryController();

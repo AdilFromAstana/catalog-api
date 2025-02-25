@@ -1,4 +1,4 @@
-const { Category } = require("../models");
+const { Category, Attribute } = require("../models");
 
 class CategoryService {
   async getAllCategories() {
@@ -54,6 +54,28 @@ class CategoryService {
       console.error("Error fetching categories:", error);
       throw new Error("Failed to fetch categories");
     }
+  }
+
+  async addOrUpdateAttributes(categoryId, attributes) {
+    const category = await Category.findByPk(categoryId);
+    if (!category) return null;
+
+    if (!Array.isArray(attributes)) {
+      throw new Error("Attributes должен быть массивом");
+    }
+
+    // Проходим по каждому атрибуту и создаем/обновляем в БД
+    for (const attr of attributes) {
+      await Attribute.upsert({
+        categoryId,
+        code: attr.code,
+        titleRu: attr.titleRu,
+        titleKz: attr.titleKz,
+        options: attr.options || [],
+      });
+    }
+
+    return { message: "Атрибуты успешно обновлены" };
   }
 }
 
