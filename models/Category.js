@@ -21,6 +21,11 @@ const Category = sequelize.define("Category", {
   mainCategoryTitleRu: { type: DataTypes.STRING, allowNull: false },
   mainCategoryTitleKz: { type: DataTypes.STRING, allowNull: false },
   hasChild: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false }, // Есть ли подкатегории
+  features: {
+    type: DataTypes.JSONB,
+    allowNull: false,
+    defaultValue: [],
+  },
 });
 
 module.exports = Category;

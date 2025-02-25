@@ -4,12 +4,16 @@ const Business = require("./Business");
 const Category = require("./Category");
 const Item = require("./Item");
 const Type = require("./Type");
+const Attribute = require("./Attribute");
 
 Business.belongsTo(BusinessType, { foreignKey: "typeId" });
 BusinessType.hasMany(Business, { foreignKey: "typeId" });
 
-Category.belongsTo(Category, { as: "parent", foreignKey: "parentId" }); // Родительская категория
-Category.hasMany(Category, { as: "children", foreignKey: "parentId" }); // Дочерние категории
+Category.belongsTo(Category, { as: "parent", foreignKey: "parentId" });
+Category.hasMany(Category, { as: "children", foreignKey: "parentId" });
+
+Category.hasMany(Attribute, { foreignKey: "categoryId", as: "attributes" });
+Attribute.belongsTo(Category, { foreignKey: "categoryId", as: "category" });
 
 Item.belongsTo(Category, { foreignKey: "categoryId" });
 Category.hasMany(Item, { foreignKey: "categoryId" });
