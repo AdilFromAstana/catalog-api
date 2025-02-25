@@ -12,8 +12,8 @@ BusinessType.hasMany(Business, { foreignKey: "typeId" });
 Category.belongsTo(Category, { as: "parent", foreignKey: "parentId" });
 Category.hasMany(Category, { as: "children", foreignKey: "parentId" });
 
-Category.hasMany(Attribute, { foreignKey: "categoryId", as: "attributes" });
 Attribute.belongsTo(Category, { foreignKey: "categoryId", as: "category" });
+Category.hasMany(Attribute, { foreignKey: "categoryId", as: "categoryAttributes" });
 
 Item.belongsTo(Category, { foreignKey: "categoryId" });
 Category.hasMany(Item, { foreignKey: "categoryId" });
@@ -33,5 +33,6 @@ module.exports = {
   Category,
   Item,
   Type,
+  Attribute,
   sequelize,
 };

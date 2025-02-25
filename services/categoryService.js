@@ -48,7 +48,7 @@ class CategoryService {
         currentTitleRu: categories[0]?.parentTitleRu || "Главная категория",
         currentId: level === 1 ? null : categories[0]?.parentId, // Если level = 1, parentId = null
         currentLevel: level,
-        hasChild: categories[0]?.hasChild
+        hasChild: categories[0]?.hasChild,
       };
     } catch (error) {
       console.error("Error fetching categories:", error);
