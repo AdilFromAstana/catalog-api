@@ -54,10 +54,11 @@ class CategoryController {
 
   async getCategoriesByLevelAndParent(req, res) {
     try {
-      const categories = await categoryService.getCategoriesByLevelAndParent(
-        req.query.level,
-        req.query.parentId
-      );
+      const categories = await categoryService.getCategoriesByLevelAndParent({
+        level: req.query.level,
+        parentId: req.query.parentId,
+        titleRu: req.query.titleRu,
+      });
       res.json(categories);
     } catch (error) {
       res.status(500).json({ error: error.message });

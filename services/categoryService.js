@@ -1,3 +1,4 @@
+const { Op } = require("sequelize");
 const { Category, Attribute } = require("../models");
 
 class CategoryService {
@@ -30,15 +31,28 @@ class CategoryService {
     return { message: "Категория удалена" };
   }
 
-  async getCategoriesByLevelAndParent(level, parentId = null) {
+  async getCategoriesByLevelAndParent({
+    level,
+    parentId = null,
+    titleRu = "",
+  }) {
+    console.log("titleRu:", titleRu);
     try {
       let whereCondition = {};
-      if (parentId && level > 1) {
-        whereCondition.parentId = parentId;
+
+      // ✅ Если есть `titleRu`, игнорируем `level` и `parentId`
+      if (titleRu) {
+        whereCondition.titleRu = { [Op.iLike]: `%${titleRu}%` };
+      } else {
+        // ✅ Если `titleRu` нет, используем `level` и `parentId`
+        if (parentId) {
+          whereCondition.parentId = parentId;
+        }
+        if (level) {
+          whereCondition.level = level;
+        }
       }
-      if (level <= 3) {
-        whereCondition.level = level;
-      }
+
       const categories = await Category.findAll({
         where: whereCondition,
       });
@@ -47,8 +61,8 @@ class CategoryService {
         categories,
         currentTitleRu: categories[0]?.parentTitleRu || "Главная категория",
         currentId: level === 1 ? null : categories[0]?.parentId, // Если level = 1, parentId = null
-        currentLevel: level,
-        hasChild: categories[0]?.hasChild,
+        currentLevel: level || null,
+        hasChild: categories.some((category) => category.hasChild),
       };
     } catch (error) {
       console.error("Error fetching categories:", error);
