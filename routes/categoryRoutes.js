@@ -13,6 +13,10 @@ router.get(
   "/getCategoriesAndAttributesByLevelAndParent",
   categoryController.getCategoriesAndAttributesByLevelAndParent
 );
+router.get(
+  "/getCategoryHierarchies",
+  categoryController.getCategoryHierarchies
+);
 router.post("/create", categoryController.create);
 router.put("/update/:id", categoryController.update);
 router.delete("/delete/:id", categoryController.delete);
