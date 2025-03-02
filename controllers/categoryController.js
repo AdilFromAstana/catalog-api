@@ -64,6 +64,20 @@ class CategoryController {
       res.status(500).json({ error: error.message });
     }
   }
+  
+  async getCategoriesAndAttributesByLevelAndParent(req, res) {
+    try {
+      const categories =
+        await categoryService.getCategoriesAndAttributesByLevelAndParent({
+          level: req.query.level,
+          parentId: req.query.parentId,
+          titleRu: req.query.titleRu,
+        });
+      res.json(categories);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
 
   async addOrUpdateAttributes(req, res) {
     try {

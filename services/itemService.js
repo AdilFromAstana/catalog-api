@@ -1,14 +1,19 @@
-const { Item, sequelize, Category } = require("../models");
+const { Item, sequelize, Business } = require("../models");
 const ItemAttribute = require("../models/ItemAttribute");
 
 class ItemService {
-  async getAll({ businessId }) {
+  async getAll({ businessId, categoryId }) {
+    const where = {
+      ...(businessId && { businessId }),
+      ...(categoryId && { categoryId }),
+    };
+
     return await Item.findAll({
-      where: { businessId },
+      where,
       include: [
         {
           model: ItemAttribute,
-          as: "itemAttributes", // Указываем псевдоним из модели
+          as: "itemAttributes",
         },
       ],
     });
@@ -22,10 +27,23 @@ class ItemService {
     const transaction = await sequelize.transaction(); // Создаем транзакцию
 
     try {
-      // Создаем товар (Item) внутри транзакции
       const item = await Item.create(data, { transaction });
 
-      // Преобразуем attributes в массив для записи
+      const business = await Business.findByPk(data.businessId, {
+        transaction,
+      });
+
+      if (business) {
+        let uniqueCategories = business.uniqueCategories || [];
+
+        // Если categoryId еще нет в массиве, добавляем
+        if (!uniqueCategories.includes(data.categoryId)) {
+          uniqueCategories.push(data.categoryId);
+
+          await business.update({ uniqueCategories }, { transaction });
+        }
+      }
+
       const attributeData = data.attributes.map((attr) => ({
         itemId: item.id,
         code: attr.code,
@@ -35,15 +53,12 @@ class ItemService {
         value: attr.value,
       }));
 
-      // Создаем атрибуты (ItemAttribute) внутри транзакции
       await ItemAttribute.bulkCreate(attributeData, { transaction });
 
-      // Подтверждаем транзакцию
       await transaction.commit();
 
       return item;
     } catch (error) {
-      // Откатываем все изменения, если произошла ошибка
       await transaction.rollback();
       throw error; // Пробрасываем ошибку дальше
     }
