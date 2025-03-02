@@ -3,7 +3,9 @@ const itemService = require("../services/itemService");
 class ItemController {
   async getAll(req, res) {
     try {
-      const items = await itemService.getAll();
+      const businessId = req.query.businessId;
+      console.log("businessId: ", businessId);
+      const items = await itemService.getAll({ businessId });
       res.json(items);
     } catch (error) {
       res.status(500).json({ error: error.message });

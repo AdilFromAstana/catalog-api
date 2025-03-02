@@ -36,7 +36,6 @@ class CategoryService {
     parentId = null,
     titleRu = "",
   }) {
-    console.log("titleRu:", titleRu);
     try {
       let whereCondition = {};
 
@@ -78,7 +77,8 @@ class CategoryService {
       throw new Error("Attributes должен быть массивом");
     }
 
-    // Проходим по каждому атрибуту и создаем/обновляем в БД
+    category.set("attributes", attributes);
+    await category.save();
     for (const attr of attributes) {
       await Attribute.upsert({
         categoryId,
