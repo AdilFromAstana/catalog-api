@@ -90,6 +90,17 @@ class CategoryController {
       res.status(500).json({ error: error.message });
     }
   }
+
+  async getCategoryHierarchies(req, res) {
+    try {
+      const businessId = req.query.businessId;
+      console.log("businessId: ", businessId);
+      const items = await categoryService.getCategoryHierarchies();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
 }
 
 module.exports = new CategoryController();

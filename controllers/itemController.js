@@ -12,6 +12,24 @@ class ItemController {
     }
   }
 
+  async filterItems(req, res) {
+    try {
+      const items = await itemService.filterItems();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+  
+  async getAttributeCounts(req, res) {
+    try {
+      const items = await itemService.getAttributeCounts();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
   async getOne(req, res) {
     try {
       const item = await itemService.getById(req.params.id);

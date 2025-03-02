@@ -9,14 +9,29 @@ const ItemAttribute = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "Items", // Ссылаемся на таблицу `items`
+        model: "Items",
         key: "id",
       },
-      onDelete: "CASCADE",
     },
-    code: { type: DataTypes.STRING, allowNull: false }, // Код атрибута
-    titleKz: { type: DataTypes.STRING, allowNull: false }, // Название на казахском
-    titleRu: { type: DataTypes.STRING, allowNull: false }, // Название на русском
+    businessId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "Businesses",
+        key: "id",
+      },
+    },
+    categoryId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "Categories",
+        key: "id",
+      },
+    },
+    code: { type: DataTypes.STRING, allowNull: false },
+    titleKz: { type: DataTypes.STRING, allowNull: false },
+    titleRu: { type: DataTypes.STRING, allowNull: false },
     dataType: {
       type: DataTypes.ENUM(
         "string",

@@ -91,6 +91,54 @@ class CategoryService {
 
     return { message: "Атрибуты успешно обновлены" };
   }
+
+  async getCategoryHierarchies(categoryIds = [294, 29]) {
+    let categoryMap = new Map();
+
+    for (const categoryId of categoryIds) {
+      let currentCategory = await Category.findOne({
+        where: { id: categoryId },
+        attributes: ["id", "titleRu", "parentId", "hasChild"],
+      });
+
+      while (currentCategory) {
+        categoryMap.set(currentCategory.id, {
+          id: currentCategory.id,
+          titleRu: currentCategory.titleRu,
+          parentId: currentCategory.parentId,
+          hasChild: currentCategory.hasChild,
+          children: [], // Сюда будем добавлять дочерние категории
+        });
+
+        if (!currentCategory.parentId) break;
+
+        currentCategory = await Category.findOne({
+          where: { id: currentCategory.parentId },
+          attributes: ["id", "titleRu", "parentId", "hasChild"],
+        });
+      }
+    }
+
+    // Преобразуем список в дерево
+    let tree = [];
+    let nodes = new Map();
+
+    // Создаем узлы
+    for (const category of categoryMap.values()) {
+      nodes.set(category.id, category);
+    }
+
+    // Привязываем дочерние категории к родителям
+    for (const category of nodes.values()) {
+      if (category.parentId && nodes.has(category.parentId)) {
+        nodes.get(category.parentId).children.push(category);
+      } else {
+        tree.push(category);
+      }
+    }
+
+    return tree;
+  }
 }
 
 module.exports = new CategoryService();

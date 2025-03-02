@@ -1,4 +1,4 @@
-const { Item, sequelize } = require("../models");
+const { Item, sequelize, Category } = require("../models");
 const ItemAttribute = require("../models/ItemAttribute");
 
 class ItemService {
@@ -60,6 +60,68 @@ class ItemService {
     if (!item) throw new Error("Товар не найден");
     await item.destroy();
     return { message: "Товар удален" };
+  }
+
+  async getAttributeCounts(categoryId = 294, businessId = 1) {
+    if (!categoryId || !businessId) {
+      throw new Error("categoryId и businessId обязательны");
+    }
+
+    return await sequelize.query(
+      `SELECT 
+            code,
+            json_agg(json_build_object('value', value::text, 'count', count)) AS options
+        FROM (
+            SELECT 
+                code,
+                value::text AS value, 
+                COUNT(*) AS count 
+            FROM "ItemAttributes" 
+            WHERE "categoryId" = :categoryId AND "businessId" = :businessId
+            GROUP BY code, value
+            ORDER BY count DESC
+        ) subquery
+        GROUP BY code;`,
+      {
+        type: sequelize.QueryTypes.SELECT,
+        replacements: { categoryId, businessId },
+      }
+    );
+  }
+
+  // Фильтрация товаров по атрибутам
+  async filterItems(filters) {
+    if (!filters || Object.keys(filters).length === 0) {
+      throw new Error("Не переданы фильтры");
+    }
+
+    let whereConditions = [];
+    let joinClauses = [];
+    let i = 1;
+
+    for (const [key, value] of Object.entries(filters)) {
+      const alias = `ia${i}`;
+      joinClauses.push(
+        `JOIN "ItemAttributes" ${alias} ON i.id = ${alias}."itemId"`
+      );
+
+      if (Array.isArray(value)) {
+        whereConditions.push(
+          `'${value[0]}' = ANY(SELECT jsonb_array_elements_text(${alias}.value)) AND ${alias}.code = '${key}'`
+        );
+      } else {
+        whereConditions.push(
+          `${alias}.code = '${key}' AND ${alias}.value = '"${value}"'`
+        );
+      }
+      i++;
+    }
+
+    const query = `SELECT i.* FROM "Items" i ${joinClauses.join(
+      " "
+    )} WHERE ${whereConditions.join(" AND ")}`;
+
+    return await sequelize.query(query, { type: sequelize.QueryTypes.SELECT });
   }
 }
 module.exports = new ItemService();
