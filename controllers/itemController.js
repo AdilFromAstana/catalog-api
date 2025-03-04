@@ -20,7 +20,16 @@ class ItemController {
       res.status(500).json({ error: error.message });
     }
   }
-  
+
+  async getItemsByCategory(req, res) {
+    try {
+      const items = await itemService.getItemsByCategory();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
   async getAttributeCounts(req, res) {
     try {
       const items = await itemService.getAttributeCounts();

@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { Category, Attribute, Business } = require("../models");
+const { Category, Attribute, Business, sequelize } = require("../models");
 
 class CategoryService {
   async getAllCategories() {
@@ -157,51 +157,105 @@ class CategoryService {
 
     return { message: "Атрибуты успешно обновлены" };
   }
+  ///КАТЕГОРИИ В ДЕРЕВЕ
+  async getCategoryHierarchies(categoryIds = [294, 1148, 990, 1023, 29]) {
+    let categories = await Category.findAll({
+      where: {
+        id: categoryIds,
+      },
+      attributes: ["id", "titleRu", "parentId", "hasChild"],
+    });
 
-  async getCategoryHierarchies(categoryIds = [294, 29]) {
-    let categoryMap = new Map();
+    let parentIds = categories
+      .map((cat) => cat.parentId)
+      .filter((id) => id !== null);
 
-    for (const categoryId of categoryIds) {
-      let currentCategory = await Category.findOne({
-        where: { id: categoryId },
+    while (parentIds.length > 0) {
+      let parents = await Category.findAll({
+        where: {
+          id: parentIds,
+        },
         attributes: ["id", "titleRu", "parentId", "hasChild"],
       });
 
-      while (currentCategory) {
-        categoryMap.set(currentCategory.id, {
-          id: currentCategory.id,
-          titleRu: currentCategory.titleRu,
-          parentId: currentCategory.parentId,
-          hasChild: currentCategory.hasChild,
-          children: [], // Сюда будем добавлять дочерние категории
-        });
-
-        if (!currentCategory.parentId) break;
-
-        currentCategory = await Category.findOne({
-          where: { id: currentCategory.parentId },
-          attributes: ["id", "titleRu", "parentId", "hasChild"],
-        });
-      }
+      categories.push(...parents);
+      parentIds = parents
+        .map((cat) => cat.parentId)
+        .filter((id) => id !== null);
     }
 
-    // Преобразуем список в дерево
+    let categoryMap = new Map();
+    categories.forEach((category) => {
+      categoryMap.set(category.id, { ...category.dataValues, children: [] });
+    });
+
     let tree = [];
-    let nodes = new Map();
-
-    // Создаем узлы
-    for (const category of categoryMap.values()) {
-      nodes.set(category.id, category);
-    }
-
-    // Привязываем дочерние категории к родителям
-    for (const category of nodes.values()) {
-      if (category.parentId && nodes.has(category.parentId)) {
-        nodes.get(category.parentId).children.push(category);
+    categoryMap.forEach((category) => {
+      if (category.parentId && categoryMap.has(category.parentId)) {
+        categoryMap.get(category.parentId).children.push(category);
       } else {
         tree.push(category);
       }
+    });
+
+    return tree;
+  }
+
+  async getCategoryHierarchiesByBusiness(businessId = 1) {
+    if (!businessId) {
+      throw new Error("businessId обязателен");
     }
+
+    let categoryIds = await sequelize.query(
+      `SELECT DISTINCT "categoryId" FROM "Items" WHERE "businessId" = :businessId`,
+      {
+        type: sequelize.QueryTypes.SELECT,
+        replacements: { businessId },
+      }
+    );
+
+    categoryIds = categoryIds.map((row) => row.categoryId);
+
+    if (categoryIds.length === 0) {
+      return []; // Если у бизнеса нет товаров, возвращаем пустой массив
+    }
+
+    // 2️⃣ Получаем все категории, включая родительские
+    let categories = await Category.findAll({
+      where: { id: categoryIds },
+      attributes: ["id", "titleRu", "parentId", "hasChild"],
+    });
+
+    let parentIds = categories
+      .map((cat) => cat.parentId)
+      .filter((id) => id !== null);
+
+    while (parentIds.length > 0) {
+      let parents = await Category.findAll({
+        where: { id: parentIds },
+        attributes: ["id", "titleRu", "parentId", "hasChild"],
+      });
+
+      categories.push(...parents);
+      parentIds = parents
+        .map((cat) => cat.parentId)
+        .filter((id) => id !== null);
+    }
+
+    // 3️⃣ Строим дерево категорий
+    let categoryMap = new Map();
+    categories.forEach((category) => {
+      categoryMap.set(category.id, { ...category.dataValues, children: [] });
+    });
+
+    let tree = [];
+    categoryMap.forEach((category) => {
+      if (category.parentId && categoryMap.has(category.parentId)) {
+        categoryMap.get(category.parentId).children.push(category);
+      } else {
+        tree.push(category);
+      }
+    });
 
     return tree;
   }

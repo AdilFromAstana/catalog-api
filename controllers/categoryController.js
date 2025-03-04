@@ -64,7 +64,7 @@ class CategoryController {
       res.status(500).json({ error: error.message });
     }
   }
-  
+
   async getCategoriesAndAttributesByLevelAndParent(req, res) {
     try {
       const categories =
@@ -110,6 +110,17 @@ class CategoryController {
       const businessId = req.query.businessId;
       console.log("businessId: ", businessId);
       const items = await categoryService.getCategoryHierarchies();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+  
+  async getCategoryHierarchiesByBusiness(req, res) {
+    try {
+      const businessId = req.query.businessId;
+      console.log("businessId: ", businessId);
+      const items = await categoryService.getCategoryHierarchiesByBusiness();
       res.json(items);
     } catch (error) {
       res.status(500).json({ error: error.message });

@@ -76,7 +76,7 @@ class ItemService {
     await item.destroy();
     return { message: "Товар удален" };
   }
-
+  /// КОЛ-ВО ВАРИАНТОВ ПАРАМЕТРОВ
   async getAttributeCounts(categoryId = 294, businessId = 1) {
     if (!categoryId || !businessId) {
       throw new Error("categoryId и businessId обязательны");
@@ -103,9 +103,18 @@ class ItemService {
       }
     );
   }
-
-  // Фильтрация товаров по атрибутам
-  async filterItems(filters) {
+  /// ПОИСК ПО ФИЛЬТРАМ
+  async filterItems(
+    categoryId = 294,
+    businessId = 1,
+    filters = {
+      composition: ["Лен"],
+      colorType: ["Розовый"],
+    }
+  ) {
+    if (!categoryId || !businessId) {
+      throw new Error("categoryId и businessId обязательны");
+    }
     if (!filters || Object.keys(filters).length === 0) {
       throw new Error("Не переданы фильтры");
     }
@@ -114,29 +123,52 @@ class ItemService {
     let joinClauses = [];
     let i = 1;
 
-    for (const [key, value] of Object.entries(filters)) {
+    for (const [key, values] of Object.entries(filters)) {
       const alias = `ia${i}`;
       joinClauses.push(
         `JOIN "ItemAttributes" ${alias} ON i.id = ${alias}."itemId"`
       );
 
-      if (Array.isArray(value)) {
-        whereConditions.push(
-          `'${value[0]}' = ANY(SELECT jsonb_array_elements_text(${alias}.value)) AND ${alias}.code = '${key}'`
-        );
-      } else {
-        whereConditions.push(
-          `${alias}.code = '${key}' AND ${alias}.value = '"${value}"'`
-        );
-      }
+      const valueConditions = values
+        .map((value) => `${alias}.value::text = '"${value}"'`)
+        .join(" OR ");
+      whereConditions.push(
+        `(${alias}.code = '${key}' AND (${valueConditions}))`
+      );
       i++;
     }
 
-    const query = `SELECT i.* FROM "Items" i ${joinClauses.join(
-      " "
-    )} WHERE ${whereConditions.join(" AND ")}`;
+    const query = `
+        SELECT DISTINCT i.* FROM "Items" i 
+        ${joinClauses.join(" ")} 
+        WHERE i."categoryId" = :categoryId AND i."businessId" = :businessId 
+        AND ${whereConditions.join(" AND ")}`;
 
-    return await sequelize.query(query, { type: sequelize.QueryTypes.SELECT });
+    return await sequelize.query(query, {
+      type: sequelize.QueryTypes.SELECT,
+      replacements: { categoryId, businessId },
+    });
+  }
+  /// ПОИСК ПО КАТЕГОРИИ
+  async getItemsByCategory(categoryId = 300) {
+    if (!categoryId) {
+      throw new Error("categoryId обязателен");
+    }
+
+    return await sequelize.query(
+      `WITH RECURSIVE category_tree AS (
+            SELECT id FROM "Categories" WHERE id = :categoryId
+            UNION ALL
+            SELECT c.id FROM "Categories" c
+            JOIN category_tree ct ON c."parentId" = ct.id
+        )
+        SELECT * FROM "Items"
+        WHERE "categoryId" IN (SELECT id FROM category_tree);`,
+      {
+        type: sequelize.QueryTypes.SELECT,
+        replacements: { categoryId },
+      }
+    );
   }
 }
 module.exports = new ItemService();
