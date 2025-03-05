@@ -150,25 +150,40 @@ class ItemService {
     });
   }
   /// ПОИСК ПО КАТЕГОРИИ
-  async getItemsByCategory(categoryId = 300) {
-    if (!categoryId) {
-      throw new Error("categoryId обязателен");
+  async getItemsByCategory({ categoryId = null, businessId }) {
+    if (!businessId) {
+      throw new Error("businessId обязателен");
     }
 
-    return await sequelize.query(
-      `WITH RECURSIVE category_tree AS (
-            SELECT id FROM "Categories" WHERE id = :categoryId
-            UNION ALL
-            SELECT c.id FROM "Categories" c
-            JOIN category_tree ct ON c."parentId" = ct.id
+    let query;
+    let replacements = { businessId };
+
+    if (categoryId) {
+      // Если передан categoryId, ищем товары в этой категории и её подкатегориях
+      query = `
+        WITH RECURSIVE category_tree AS (
+          SELECT id FROM "Categories" WHERE id = :categoryId
+          UNION ALL
+          SELECT c.id FROM "Categories" c
+          JOIN category_tree ct ON c."parentId" = ct.id
         )
         SELECT * FROM "Items"
-        WHERE "categoryId" IN (SELECT id FROM category_tree);`,
-      {
-        type: sequelize.QueryTypes.SELECT,
-        replacements: { categoryId },
-      }
-    );
+        WHERE "categoryId" IN (SELECT id FROM category_tree)
+        AND "businessId" = :businessId;
+      `;
+      replacements.categoryId = categoryId;
+    } else {
+      // Если categoryId не передан, выбираем все товары по businessId
+      query = `
+        SELECT * FROM "Items"
+        WHERE "businessId" = :businessId;
+      `;
+    }
+
+    return await sequelize.query(query, {
+      type: sequelize.QueryTypes.SELECT,
+      replacements,
+    });
   }
 }
 module.exports = new ItemService();

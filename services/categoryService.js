@@ -158,7 +158,7 @@ class CategoryService {
     return { message: "Атрибуты успешно обновлены" };
   }
   ///КАТЕГОРИИ В ДЕРЕВЕ
-  async getCategoryHierarchies(categoryIds = [294, 1148, 990, 1023, 29]) {
+  async getCategoryHierarchiesByIds(categoryIds = [294, 1148, 990, 1023, 29]) {
     let categories = await Category.findAll({
       where: {
         id: categoryIds,

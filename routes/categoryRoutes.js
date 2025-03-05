@@ -13,8 +13,8 @@ router.get(
   categoryController.getCategoriesAndAttributesByLevelAndParent
 );
 router.get(
-  "/getCategoryHierarchies",
-  categoryController.getCategoryHierarchies
+  "/getCategoryHierarchiesByIds",
+  categoryController.getCategoryHierarchiesByIds
 );
 router.get(
   "/getCategoryHierarchiesByBusiness",

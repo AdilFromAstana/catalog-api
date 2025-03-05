@@ -21,9 +21,69 @@ class ItemController {
     }
   }
 
+  /**
+   * @swagger
+   * /api/items/getItemsByCategory:
+   *   get:
+   *     summary: Получить товары по категории и бизнесу
+   *     description: Возвращает список товаров, относящихся к указанной категории и бизнесу. Если `categoryId` не указан, возвращает все товары бизнеса.
+   *     parameters:
+   *       - in: query
+   *         name: categoryId
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: ID категории, для которой нужно получить товары. Если не указано, возвращаются все товары бизнеса.
+   *       - in: query
+   *         name: businessId
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: ID бизнеса, для которого нужно получить товары (обязательный параметр).
+   *     responses:
+   *       200:
+   *         description: Список товаров успешно получен
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 type: object
+   *                 properties:
+   *                   id:
+   *                     type: integer
+   *                     example: 1
+   *                   name:
+   *                     type: string
+   *                     example: "Футболка мужская"
+   *                   price:
+   *                     type: number
+   *                     example: 1999.99
+   *                   categoryId:
+   *                     type: integer
+   *                     example: 123
+   *                   businessId:
+   *                     type: integer
+   *                     example: 10
+   *       400:
+   *         description: Некорректный запрос (отсутствует businessId)
+   *       500:
+   *         description: Внутренняя ошибка сервера
+   */
   async getItemsByCategory(req, res) {
+    const categoryId = req.query.categoryId;
+    const businessId = req.query.businessId;
     try {
-      const items = await itemService.getItemsByCategory();
+      if (!businessId) {
+        return res
+          .status(400)
+          .json({ error: "businessId является обязательным параметром" });
+      }
+
+      const items = await itemService.getItemsByCategory({
+        categoryId,
+        businessId,
+      });
       res.json(items);
     } catch (error) {
       res.status(500).json({ error: error.message });
