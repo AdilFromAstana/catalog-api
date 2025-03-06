@@ -14,13 +14,19 @@ class ItemController {
 
   async filterItems(req, res) {
     try {
-      const items = await itemService.filterItems();
+      const businessId = req.query.businessId;
+      const categoryId = req.query.categoryId;
+      const filters = req.query.filters;
+      const items = await itemService.filterItems({
+        businessId,
+        categoryId,
+        filters,
+      });
       res.json(items);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   }
-
   /**
    * @swagger
    * /api/items/getItemsByCategory:
@@ -91,8 +97,29 @@ class ItemController {
   }
 
   async getAttributeCounts(req, res) {
+    const categoryId = req.query.categoryId;
+    const businessId = req.query.businessId;
     try {
-      const items = await itemService.getAttributeCounts();
+      const items = await itemService.getAttributeCounts({
+        categoryId,
+        businessId,
+      });
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getFilteredItems(req, res) {
+    const categoryId = req.query.categoryId;
+    const businessId = req.query.businessId;
+    const filters = req.query.filters;
+    try {
+      const items = await itemService.getAttributeCounts({
+        categoryId,
+        businessId,
+        filters,
+      });
       res.json(items);
     } catch (error) {
       res.status(500).json({ error: error.message });
