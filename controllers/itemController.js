@@ -126,8 +126,9 @@ class ItemController {
     }
   }
 
-  async getOne(req, res) {
+  async getById(req, res) {
     try {
+      console.log("req.params.id: ", req.params.id);
       const item = await itemService.getById(req.params.id);
       if (!item) return res.status(404).json({ error: "Товар не найден" });
       res.json(item);

@@ -5,7 +5,9 @@ const Category = require("./Category");
 const Item = require("./Item");
 const Type = require("./Type");
 const Attribute = require("./Attribute");
-const ItemAttribute = require("./ItemAttribute"); // Подключаем новую модель
+const ItemAttribute = require("./ItemAttribute");
+const ProductView = require("./ProductView");
+const ItemImage = require("./ItemImage");
 
 // Связь между Business и BusinessType
 Business.belongsTo(BusinessType, { foreignKey: "typeId" });
@@ -14,13 +16,6 @@ BusinessType.hasMany(Business, { foreignKey: "typeId" });
 // Категории могут быть иерархическими
 Category.belongsTo(Category, { as: "parent", foreignKey: "parentId" });
 Category.hasMany(Category, { as: "children", foreignKey: "parentId" });
-
-// Атрибуты привязываются к категории
-Attribute.belongsTo(Category, { foreignKey: "categoryId", as: "category" });
-Category.hasMany(Attribute, {
-  foreignKey: "categoryId",
-  as: "categoryAttributes",
-});
 
 // Товары принадлежат категориям
 Item.belongsTo(Category, { foreignKey: "categoryId" });
@@ -42,6 +37,9 @@ Category.hasMany(Type, { foreignKey: "categoryId" });
 Item.hasMany(ItemAttribute, { foreignKey: "itemId", as: "itemAttributes" });
 ItemAttribute.belongsTo(Item, { foreignKey: "itemId", as: "item" });
 
+Item.hasMany(ItemImage, { foreignKey: "itemId", as: "images" });
+ItemImage.belongsTo(Item, { foreignKey: "itemId", as: "item" });
+
 module.exports = {
   BusinessType,
   Business,
@@ -49,6 +47,8 @@ module.exports = {
   Item,
   Type,
   Attribute,
-  ItemAttribute, // Добавляем новую модель в экспорт
+  ItemAttribute,
+  ProductView,
+  ItemImage,
   sequelize,
 };
