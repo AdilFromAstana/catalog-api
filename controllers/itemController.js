@@ -77,8 +77,8 @@ class ItemController {
    *         description: Внутренняя ошибка сервера
    */
   async getItemsByCategory(req, res) {
-    const categoryId = req.query.categoryId;
-    const businessId = req.query.businessId;
+    const categoryId = req?.query?.categoryId;
+    const businessId = req?.query?.businessId;
     try {
       if (!businessId) {
         return res
@@ -87,6 +87,26 @@ class ItemController {
       }
 
       const items = await itemService.getItemsByCategory({
+        categoryId,
+        businessId,
+      });
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getCategoryFilters(req, res) {
+    const categoryId = req?.query?.categoryId;
+    const businessId = req?.query?.businessId;
+    try {
+      if (!businessId) {
+        return res
+          .status(400)
+          .json({ error: "businessId является обязательным параметром" });
+      }
+
+      const items = await itemService.getCategoryFilters({
         categoryId,
         businessId,
       });
