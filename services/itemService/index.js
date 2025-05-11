@@ -1,5 +1,5 @@
-const { Item, sequelize, Business, Category } = require("../models");
-const ItemAttribute = require("../models/ItemAttribute");
+const { Item, sequelize, Business, Category } = require("../../models");
+const ItemAttribute = require("../../models/ItemAttribute");
 
 class ItemService {
   async getAll({ businessId, categoryId }) {
@@ -235,10 +235,11 @@ class ItemService {
                (SELECT "imageUrl" FROM "ItemImages" im WHERE im."itemId" = i.id ORDER BY "priority" ASC LIMIT 1) AS "imageUrl"
         FROM "Items" i 
         ${joinClauses.join(" ")}
-        ${whereConditions.length > 0
-        ? `WHERE ${whereConditions.join(" AND ")}`
-        : ""
-      }
+        ${
+          whereConditions.length > 0
+            ? `WHERE ${whereConditions.join(" AND ")}`
+            : ""
+        }
         LIMIT :limit;`;
 
     console.log("✅ Итоговый SQL-запрос:", query);
@@ -252,217 +253,6 @@ class ItemService {
 
     return result;
   }
-  /// ПОИСК ПО КАТЕГОРИИ
-  async getItemsByCategory({
-    categoryId = null,
-    businessId,
-    filters = {},
-    limit = 10,
-  }) {
-    console.log("🔍 Входные параметры (до парсинга):", { categoryId, businessId, filters });
-
-    if (!businessId) {
-      throw new Error("businessId обязателен");
-    }
-
-    if (typeof filters === "string") {
-      try {
-        filters = JSON.parse(filters);
-      } catch (error) {
-        console.error("❌ Ошибка парсинга filters:", error);
-        throw new Error("Некорректный формат filters");
-      }
-    }
-
-    console.log("🔍 Входные параметры (после парсинга):", filters);
-
-    let whereConditions = [`i."businessId" = :businessId`];
-    let joinClauses = [`JOIN "Categories" c ON i."categoryId" = c.id`];
-    let replacements = { businessId, limit };
-    let categoryTreeQuery = "";
-
-    if (categoryId) {
-      // 🔥 Сначала проверяем существует ли категория
-      const category = await Category.findByPk(categoryId);
-      if (!category) {
-        throw new Error(`Категория с id = ${categoryId} не найдена`);
-      }
-
-      // ✅ Если категория найдена — строим запрос
-      categoryTreeQuery = `
-        WITH RECURSIVE category_tree AS (
-          SELECT id FROM "Categories" WHERE id = :categoryId
-          UNION ALL
-          SELECT c.id FROM "Categories" c
-          JOIN category_tree ct ON c."parentId" = ct.id
-        )
-      `;
-      whereConditions.push(`i."categoryId" IN (SELECT id FROM category_tree)`);
-      replacements.categoryId = categoryId;
-    }
-
-    let aliasIndex = 1;
-
-    if (filters && Object.keys(filters).length > 0) {
-      for (const [key, rawValues] of Object.entries(filters)) {
-        console.log(`🛠 Обработка фильтра: ${key} =>`, rawValues);
-
-        if (!Array.isArray(rawValues) || rawValues.length === 0) {
-          console.log(`⚠️ Фильтр ${key} пуст, пропускаем.`);
-          continue;
-        }
-
-        const alias = `ia${aliasIndex}`;
-        joinClauses.push(
-          `JOIN "ItemAttributes" ${alias} ON i.id = ${alias}."itemId"`
-        );
-
-        const conditions = rawValues
-          .map((val) => `TRIM(BOTH '"' FROM ${alias}."value"::text) = '${val}'`)
-          .join(" OR ");
-
-        whereConditions.push(
-          `(${alias}."code" = '${key}' AND (${conditions}))`
-        );
-
-        aliasIndex++;
-      }
-    }
-
-    const query = `
-      ${categoryTreeQuery}
-      SELECT DISTINCT i.*, 
-             c."titleRu" AS "categoryTitleRu", 
-             c."titleKz" AS "categoryTitleKz", 
-             c."parentId",
-             (SELECT "imageUrl" FROM "ItemImages" im WHERE im."itemId" = i.id ORDER BY "priority" ASC LIMIT 1) AS "imageUrl"
-      FROM "Items" i 
-      ${joinClauses.join(" ")}
-      ${whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : ""}
-      LIMIT :limit;
-    `;
-
-    const result = await sequelize.query(query, {
-      type: sequelize.QueryTypes.SELECT,
-      replacements,
-    });
-
-    return result;
-  }
-
-  async getCategoryFilters({ categoryId = null, businessId }) {
-    if (!businessId) {
-      throw new Error("businessId обязателен");
-    }
-
-    // Считаем количество всех товаров бизнеса
-    const [{ count: totalItems }] = await sequelize.query(`
-      SELECT COUNT(*)::int AS count
-      FROM "Items"
-      WHERE "businessId" = :businessId
-    `, {
-      type: sequelize.QueryTypes.SELECT,
-      replacements: { businessId },
-    });
-
-    if (categoryId) {
-      const category = await Category.findByPk(categoryId);
-      if (!category) {
-        throw new Error(`Категория с id = ${categoryId} не найдена`);
-      }
-
-      if (category.hasChild) {
-        const childCategories = await Category.findAll({
-          where: { parentId: categoryId },
-          attributes: ["id", "titleRu", "titleKz", "hasChild"],
-          order: [["titleRu", "ASC"]],
-        });
-
-        return {
-          mode: "categories",
-          categories: childCategories,
-          totalItems,
-        };
-      } else {
-        const categoryTreeQuery = `
-          WITH RECURSIVE category_tree AS (
-            SELECT id FROM "Categories" WHERE id = :categoryId
-            UNION ALL
-            SELECT c.id FROM "Categories" c
-            JOIN category_tree ct ON c."parentId" = ct.id
-          )
-          SELECT id FROM category_tree
-        `;
-
-        const categoryIds = (await sequelize.query(categoryTreeQuery, {
-          type: sequelize.QueryTypes.SELECT,
-          replacements: { categoryId },
-        })).map(row => row.id);
-
-        const [priceRange] = await sequelize.query(`
-          SELECT MIN(price) AS "minPrice", MAX(price) AS "maxPrice"
-          FROM "Items"
-          WHERE "businessId" = :businessId
-            AND "categoryId" IN (:categoryIds)
-        `, {
-          type: sequelize.QueryTypes.SELECT,
-          replacements: { businessId, categoryIds },
-        });
-
-        const attributes = await sequelize.query(`
-          SELECT ia."code", ia."titleRu", TRIM(BOTH '"' FROM ia."value"::text) AS "value", COUNT(*) AS "count"
-          FROM "ItemAttributes" ia
-          JOIN "Items" i ON ia."itemId" = i.id
-          WHERE i."businessId" = :businessId
-            AND i."categoryId" IN (:categoryIds)
-          GROUP BY ia."code", ia."titleRu", ia."value"
-        `, {
-          type: sequelize.QueryTypes.SELECT,
-          replacements: { businessId, categoryIds },
-        });
-
-        const groupedAttributes = attributes.reduce((acc, attr) => {
-          if (!acc[attr.code]) {
-            acc[attr.code] = {
-              titleRu: attr.titleRu,
-              values: [],
-            };
-          }
-          acc[attr.code].values.push({
-            value: attr.value,
-            count: Number(attr.count),
-          });
-          return acc;
-        }, {});
-
-        return {
-          mode: "filters",
-          minPrice: priceRange.minPrice || 0,
-          maxPrice: priceRange.maxPrice || 0,
-          attributes: groupedAttributes,
-          totalItems,
-        };
-      }
-    } else {
-      const categories = await sequelize.query(`
-        SELECT DISTINCT c.id, c."titleRu", c."titleKz", c."hasChild"
-        FROM "Categories" c
-        JOIN "Items" i ON i."categoryId" = c.id
-        WHERE i."businessId" = :businessId
-        ORDER BY c."titleRu" ASC
-      `, {
-        type: sequelize.QueryTypes.SELECT,
-        replacements: { businessId },
-      });
-
-      return {
-        mode: "categories",
-        categories,
-        totalItems,
-      };
-    }
-  }
-
 
   async getFilteredItems({ categoryId = null, businessId, filters = {} }) {
     console.log("🔍 Входные параметры:", { categoryId, businessId, filters });

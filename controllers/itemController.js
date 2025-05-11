@@ -1,4 +1,6 @@
 const itemService = require("../services/itemService");
+const getCategoryFilters = require("../services/itemService/getCategoryFilters");
+const getItemsByCategory = require("../services/itemService/getItemsByCategory");
 
 class ItemController {
   async getAll(req, res) {
@@ -86,7 +88,7 @@ class ItemController {
           .json({ error: "businessId является обязательным параметром" });
       }
 
-      const items = await itemService.getItemsByCategory({
+      const items = await getItemsByCategory({
         categoryId,
         businessId,
       });
@@ -106,7 +108,7 @@ class ItemController {
           .json({ error: "businessId является обязательным параметром" });
       }
 
-      const items = await itemService.getCategoryFilters({
+      const items = await getCategoryFilters({
         categoryId,
         businessId,
       });
